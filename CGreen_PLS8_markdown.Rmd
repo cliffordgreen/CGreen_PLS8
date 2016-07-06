@@ -1,0 +1,85 @@
+---
+title: "Green_PosdtLiveSession8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Intro
+
+In this markdown file we visualize and interpret the data file nyt1.csv
+
+```{r }
+clickfile <- "http://stat.columbia.edu/~rachel/datasets/nyt1.csv"
+clickdata <- read.csv(url(clickfile))
+```
+
+This portion creates a new variable called age_group that categorizes age into 7 different groups. Then it removes all entries that contain a 0 value for Impressions. We also create a new variable called CTR which is click/impression
+
+```{r }
+clickdata$Age_Group <- cut(clickdata$Age, c(-Inf, 18, 24, 34, 44, 54, 64, Inf))
+ImpSub <- subset(clickdata, Impressions>0)
+ImpSub$CTR <- ImpSub$Clicks/ImpSub$Impressions 
+```
+
+We plot Impression vs. Age group and then we color it by the new variable Age group using ggplot
+```{r}
+library(ggplot2) 
+ggplot(subset(ImpSub, Impressions>0), aes(x=Impressions, fill=Age_Group))+
+  labs(title="Impressions vs. Age_Group")+
+  geom_histogram(binwidth=1)
+```
+
+We plot CTR vs. Age Group and then we color it by the new variable Age group using ggplot
+```{r}
+ggplot(subset(ImpSub, CTR>0), aes(x=CTR, fill=Age_Group))+
+  labs(title="CTR vs. Age_Group")+
+  geom_histogram(binwidth=.025)
+
+```
+
+We make a new column where the data set is sorted by the CTR value using 5 different groups
+```{r}
+ImpSub$sortCTR <- cut(ImpSub$CTR, c(-Inf, .2, .4, .6, .8, Inf))
+library(dplyr)
+library(doBy)
+```
+The first function below calls a summary of the total number of males, that have impressions, clicked, and signed in. The function below filters by gender, impression, clicks, and CTR, and then I just call length of one of the columns to get the number of males.
+
+
+```{r}
+summaryBy(Gender+Signed_In+Impressions+Clicks~SortCTR, data = ImpSub)
+NewImp <- filter(ImpSub, Gender == 1 & Impressions > 0 & Clicks > 0 & Signed_In > 0 )
+```
+The length is 11303, so there are that many men that all met the requirements. For the other quesionts we can 
+```{r}
+length(NewImp$Gender)
+```
+we can get the percentage of men that signed in by multiplying the mean by 100, so 36.7% were men. 
+
+```{r}
+byAge <- group_by(ImpSub, Age_Group)
+summarise(byAge, averageImp = mean(Impressions),averageClick = mean(Clicks),averageMale = mean(Gender), averageCTR = mean(CTR))
+```
+this gets all the summary statistics for each age group by calling the group_by function
+```{r}
+tableCTRvAge <- table(ImpSub$Age_Group, ImpSub$CTR)
+tableCTRvAge
+```
+Here is a table of Age_Group vs. CTR
+
+Again i plotted CTR for age groups
+```{r}
+ggplot(subset(ImpSub, CTR>0), aes(x=CTR, fill=Age_Group))+
+  labs(title="Click-through rate by age group")+
+  geom_histogram(binwidth=.025)
+```
+And here is a dot chart I made for CTR v Age colored by Gender
+```{r}
+ggplot(subset(ImpSub, CTR>0), )+
+  labs(title="CTRvAge")+
+  geom_point(aes(x=CTR, y=Age, color = Gender))
+```
+
